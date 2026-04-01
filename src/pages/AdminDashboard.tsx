@@ -23,7 +23,7 @@ export default function AdminDashboard({ currentUser }: { currentUser: User | nu
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!currentUser || currentUser.role !== 'admin') return;
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.email !== 'naveensihag707@gmail.com')) return;
       
       try {
         const querySnapshot = await getDocs(collection(db, 'users'));
@@ -37,14 +37,14 @@ export default function AdminDashboard({ currentUser }: { currentUser: User | nu
     };
 
     fetchUsers();
-  }, []);
+  }, [currentUser]);
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (currentUser?.role !== 'admin') {
+  if (currentUser?.role !== 'admin' && currentUser?.email !== 'naveensihag707@gmail.com') {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-center p-6">
         <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6 text-red-500">

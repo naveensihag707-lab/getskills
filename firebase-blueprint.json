@@ -67,6 +67,10 @@
       "schema": "User",
       "description": "User profiles"
     },
+    "/public_profiles/{userId}": {
+      "schema": "User",
+      "description": "Public user profiles for matching (excludes sensitive data)"
+    },
     "/sessions/{sessionId}": {
       "schema": "Session",
       "description": "Skill swap sessions"

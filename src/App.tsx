@@ -25,7 +25,7 @@ import Chat from './pages/Chat';
 import Scheduler from './pages/Scheduler';
 import Tracker from './pages/Tracker';
 import AdminDashboard from './pages/AdminDashboard';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from './firebase';
 
@@ -42,17 +42,39 @@ export default function App() {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            const userData = userDoc.data() as User;
+            let userData = userDoc.data() as User;
+            
+            // Force admin role for the specific email
+            if (user.email === 'naveensihag707@gmail.com' && userData.role !== 'admin') {
+              userData.role = 'admin';
+              try {
+                await updateDoc(doc(db, 'users', user.uid), { role: 'admin' });
+              } catch (err) {
+                console.error('Error updating admin role in Firestore:', err);
+              }
+            }
+            
             setCurrentUser(userData);
             localStorage.setItem('skillswap_user', JSON.stringify(userData));
             
-            // Fetch all users once authenticated
-            try {
-              const querySnapshot = await getDocs(collection(db, 'users'));
-              const usersList = querySnapshot.docs.map(doc => doc.data() as User);
-              setAllUsers(usersList);
-            } catch (error) {
-              console.error('Error fetching all users in App.tsx:', error);
+            // Fetch all users only if admin (for dashboard)
+            if (userData.role === 'admin') {
+              try {
+                const querySnapshot = await getDocs(collection(db, 'users'));
+                const usersList = querySnapshot.docs.map(doc => doc.data() as User);
+                setAllUsers(usersList);
+              } catch (error) {
+                console.error('Error fetching all users in App.tsx:', error);
+              }
+            } else {
+              // Fetch public profiles for matching
+              try {
+                const querySnapshot = await getDocs(collection(db, 'public_profiles'));
+                const usersList = querySnapshot.docs.map(doc => doc.data() as User);
+                setAllUsers(usersList);
+              } catch (error) {
+                console.error('Error fetching public profiles in App.tsx:', error);
+              }
             }
           }
         } catch (error) {
@@ -101,7 +123,7 @@ export default function App() {
                     <NavLink to="/chat" icon={<MessageSquare size={20} />} label="Messages" />
                     <NavLink to="/schedule" icon={<Calendar size={20} />} label="Schedule" />
                     <NavLink to="/tracker" icon={<CheckCircle2 size={20} />} label="Progress" />
-                    {currentUser?.role === 'admin' && (
+                    {(currentUser?.role === 'admin' || currentUser?.email === 'naveensihag707@gmail.com') && (
                       <NavLink to="/admin" icon={<ShieldCheck size={20} />} label="Admin Panel" />
                     )}
                   </nav>

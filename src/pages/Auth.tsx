@@ -94,6 +94,11 @@ export default function Auth({ setCurrentUser }: { setCurrentUser: (user: User) 
         };
 
         await setDoc(doc(db, 'users', userId), newUser);
+        
+        // Create public profile (exclude sensitive data)
+        const { email: _, password: __, blockedUsers: ___, ...publicProfile } = newUser;
+        await setDoc(doc(db, 'public_profiles', userId), publicProfile);
+        
         localStorage.setItem('skillswap_user', JSON.stringify(newUser));
         setCurrentUser(newUser);
         navigate('/dashboard');

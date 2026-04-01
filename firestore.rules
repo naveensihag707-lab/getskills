@@ -59,7 +59,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.email == "naveensihag707@gmail.com" ||
+        (request.auth.token.email == "naveensihag707@gmail.com" && request.auth.token.email_verified == true) ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
@@ -80,10 +80,9 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // Allow read if owner or admin. 
-      // Note: If public profiles are needed, we'd need to split the collection or denormalize.
-      // For now, we'll allow authenticated users to read basic info of others for matching.
-      allow read: if isAuthenticated();
+      // Allow read only if owner or admin.
+      // This protects private data like emails and blocked users.
+      allow read: if isOwner(userId) || isAdmin();
       
       // Allow create if the user is creating their own profile and setting role to 'user'
       // Or if admin is creating
@@ -91,6 +90,15 @@ service cloud.firestore {
       
       // Allow update if owner (cannot change role) or admin
       allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+    }
+
+    match /public_profiles/{userId} {
+      // Public info is readable by all authenticated users for matching
+      allow read: if isAuthenticated();
+      // Only the owner can create/update their public profile
+      allow create, update: if isOwner(userId);
+      // Admin can do anything
+      allow delete: if isAdmin();
     }
 
     match /sessions/{sessionId} {
