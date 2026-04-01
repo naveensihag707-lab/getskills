@@ -18,10 +18,9 @@ import { cn } from '../lib/utils';
 import { db } from '../firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
-export default function Dashboard({ currentUser }: { currentUser: User | null }) {
+export default function Dashboard({ currentUser, allUsers }: { currentUser: User | null, allUsers: User[] }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [matches, setMatches] = useState<User[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,24 +40,15 @@ export default function Dashboard({ currentUser }: { currentUser: User | null })
           console.error('Error fetching sessions in Dashboard.tsx:', error);
         }
 
-        // Fetch all users for matching and partner details
-        try {
-          const usersSnapshot = await getDocs(collection(db, 'users'));
-          const usersList = usersSnapshot.docs.map(doc => doc.data() as User);
-          setAllUsers(usersList);
-          
-          // Simple matching logic for dashboard
-          setMatches(usersList.filter(u => u.id !== currentUser.id).slice(0, 3));
-        } catch (error) {
-          console.error('Error fetching users in Dashboard.tsx:', error);
-        }
+        // Simple matching logic for dashboard
+        setMatches(allUsers.filter(u => u.id !== currentUser.id).slice(0, 3));
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
     };
 
     fetchData();
-  }, [currentUser]);
+  }, [currentUser, allUsers]);
 
   const upcomingSessions = sessions.filter(s => s.status === 'pending');
   const completedSessions = sessions.filter(s => s.status === 'completed');

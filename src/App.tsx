@@ -149,11 +149,11 @@ export default function App() {
                 {/* Main Content */}
                 <main className="flex-1 p-4 md:p-10 overflow-y-auto">
                   <Routes>
-                    <Route path="/dashboard" element={<Dashboard currentUser={currentUser} />} />
+                    <Route path="/dashboard" element={<Dashboard currentUser={currentUser} allUsers={allUsers} />} />
                     <Route path="/matches" element={<Matches currentUser={currentUser} allUsers={allUsers} />} />
                     <Route path="/chat" element={<Chat currentUser={currentUser} />} />
                     <Route path="/chat/:userId" element={<Chat currentUser={currentUser} />} />
-                    <Route path="/schedule" element={<Scheduler currentUser={currentUser} />} />
+                    <Route path="/schedule" element={<Scheduler currentUser={currentUser} allUsers={allUsers} />} />
                     <Route path="/tracker" element={<Tracker currentUser={currentUser} />} />
                     <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
                   </Routes>

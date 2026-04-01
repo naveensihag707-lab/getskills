@@ -23,7 +23,7 @@ export default function Chat({ currentUser }: { currentUser: User | null }) {
     if (userId) {
       const fetchChatUser = async () => {
         try {
-          const userDoc = await getDoc(doc(db, 'users', userId));
+          const userDoc = await getDoc(doc(db, 'public_profiles', userId));
           if (userDoc.exists()) {
             setChatUser(userDoc.data() as User);
           }

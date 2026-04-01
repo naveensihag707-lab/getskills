@@ -8,7 +8,7 @@ import { cn } from '../lib/utils';
 import { db } from '../firebase';
 import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 
-export default function Scheduler({ currentUser }: { currentUser: User | null }) {
+export default function Scheduler({ currentUser, allUsers }: { currentUser: User | null, allUsers: User[] }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -33,9 +33,7 @@ export default function Scheduler({ currentUser }: { currentUser: User | null })
         const sessionsList = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
         setSessions(sessionsList);
 
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const usersList = usersSnapshot.docs.map(doc => doc.data() as User);
-        setMatches(usersList.filter((u: User) => u.id !== currentUser.id));
+        setMatches(allUsers.filter((u: User) => u.id !== currentUser.id));
       } catch (error) {
         console.error('Error fetching scheduler data:', error);
       } finally {
@@ -44,7 +42,7 @@ export default function Scheduler({ currentUser }: { currentUser: User | null })
     };
 
     fetchData();
-  }, [currentUser]);
+  }, [currentUser, allUsers]);
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
