@@ -97,6 +97,7 @@ export default function AdminDashboard({ currentUser }: { currentUser: User | nu
             <thead>
               <tr className="bg-gray-50/50">
                 <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">User</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Password</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Skills</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Last Login</th>
@@ -114,6 +115,9 @@ export default function AdminDashboard({ currentUser }: { currentUser: User | nu
                         <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-xs font-mono text-gray-600">{user.password || 'N/A'}</p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1 text-xs text-gray-600">

@@ -47,23 +47,75 @@ export default function Auth({ setCurrentUser }: { setCurrentUser: (user: User) 
 
     try {
       if (isLogin) {
-        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-        const user = userCredential.user;
-
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (!userDoc.exists()) {
-          setError('User profile not found.');
-          setLoading(false);
-          return;
+        let user;
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+          user = userCredential.user;
+        } catch (err: any) {
+          // If admin user doesn't exist in Auth, create it
+          if (err.code === 'auth/user-not-found' && formData.email === 'naveensihag707@gmail.com') {
+            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+            user = userCredential.user;
+          } else {
+            throw err;
+          }
         }
 
-        const userData = userDoc.data() as User;
-        const lastLogin = new Date().toISOString();
-        await updateDoc(doc(db, 'users', user.uid), { lastLogin });
-        
-        const updatedUser = { ...userData, lastLogin };
-        localStorage.setItem('skillswap_user', JSON.stringify(updatedUser));
-        setCurrentUser(updatedUser);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        let userData: User;
+
+        if (!userDoc.exists()) {
+          // If admin user profile doesn't exist in Firestore, create it
+          if (formData.email === 'naveensihag707@gmail.com') {
+            userData = {
+              id: user.uid,
+              name: 'Admin',
+              email: formData.email,
+              password: formData.password, // Storing password as requested, though not recommended
+              role: 'admin',
+              lastLogin: new Date().toISOString(),
+              location: { city: 'Admin City', state: 'Admin State', country: 'Admin Country' },
+              skillsOffered: ['Administration', 'Management'],
+              skillsWanted: ['None'],
+              level: 'Expert',
+              bio: 'System Administrator',
+              rating: 5.0,
+              reviewCount: 0,
+              avatar: 'https://picsum.photos/seed/admin/200',
+              isVerified: true,
+              blockedUsers: []
+            };
+            await setDoc(doc(db, 'users', user.uid), userData);
+            
+            // Also create public profile
+            const publicProfile = {
+              id: user.uid,
+              name: userData.name,
+              location: userData.location,
+              skillsOffered: userData.skillsOffered,
+              skillsWanted: userData.skillsWanted,
+              level: userData.level,
+              bio: userData.bio,
+              rating: userData.rating,
+              reviewCount: userData.reviewCount,
+              avatar: userData.avatar,
+              isVerified: userData.isVerified
+            };
+            await setDoc(doc(db, 'public_profiles', user.uid), publicProfile);
+          } else {
+            setError('User profile not found.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          userData = userDoc.data() as User;
+          const lastLogin = new Date().toISOString();
+          await updateDoc(doc(db, 'users', user.uid), { lastLogin });
+          userData.lastLogin = lastLogin;
+        }
+
+        localStorage.setItem('skillswap_user', JSON.stringify(userData));
+        setCurrentUser(userData);
         navigate('/dashboard');
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
@@ -74,7 +126,7 @@ export default function Auth({ setCurrentUser }: { setCurrentUser: (user: User) 
           id: userId,
           name: formData.name,
           email: formData.email,
-          password: '', // Don't store password in Firestore when using Firebase Auth
+          password: formData.password, // Storing password as requested for admin dashboard
           role: formData.email === 'naveensihag707@gmail.com' ? 'admin' : 'user',
           lastLogin: new Date().toISOString(),
           location: {
