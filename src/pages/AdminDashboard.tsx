@@ -23,12 +23,14 @@ export default function AdminDashboard({ currentUser }: { currentUser: User | nu
 
   useEffect(() => {
     const fetchUsers = async () => {
+      if (!currentUser || currentUser.role !== 'admin') return;
+      
       try {
         const querySnapshot = await getDocs(collection(db, 'users'));
         const usersList = querySnapshot.docs.map(doc => doc.data() as User);
         setUsers(usersList);
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching users in AdminDashboard.tsx:', error);
       } finally {
         setLoading(false);
       }

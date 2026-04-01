@@ -10,10 +10,15 @@ import {
   setDoc, 
   doc, 
   updateDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  getDoc
 } from 'firebase/firestore';
-import { db } from '../firebase';
-import bcrypt from 'bcryptjs';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
+import { db, auth } from '../firebase';
 import { Loader2, Sparkles, ShieldCheck, Mail, Lock, User as UserIcon, MapPin } from 'lucide-react';
 
 export default function Auth({ setCurrentUser }: { setCurrentUser: (user: User) => void }) {
@@ -41,49 +46,35 @@ export default function Auth({ setCurrentUser }: { setCurrentUser: (user: User) 
     setError('');
 
     try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', formData.email));
-      const querySnapshot = await getDocs(q);
-
       if (isLogin) {
-        if (querySnapshot.empty) {
-          setError('User not found. Please sign up first.');
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        const user = userCredential.user;
+
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!userDoc.exists()) {
+          setError('User profile not found.');
           setLoading(false);
           return;
         }
 
-        const userData = querySnapshot.docs[0].data() as User;
-        const isPasswordMatch = await bcrypt.compare(formData.password, userData.password || '');
-
-        if (!isPasswordMatch) {
-          setError('Invalid password.');
-          setLoading(false);
-          return;
-        }
-
-        // Update last login
+        const userData = userDoc.data() as User;
         const lastLogin = new Date().toISOString();
-        await updateDoc(doc(db, 'users', userData.id), { lastLogin });
+        await updateDoc(doc(db, 'users', user.uid), { lastLogin });
         
         const updatedUser = { ...userData, lastLogin };
         localStorage.setItem('skillswap_user', JSON.stringify(updatedUser));
         setCurrentUser(updatedUser);
         navigate('/dashboard');
       } else {
-        if (!querySnapshot.empty) {
-          setError('User already exists. Please log in.');
-          setLoading(false);
-          return;
-        }
-
-        const hashedPassword = await bcrypt.hash(formData.password, 10);
-        const userId = Math.random().toString(36).substr(2, 9);
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        const user = userCredential.user;
+        const userId = user.uid;
         
         const newUser: User = {
           id: userId,
           name: formData.name,
           email: formData.email,
-          password: hashedPassword,
+          password: '', // Don't store password in Firestore when using Firebase Auth
           role: formData.email === 'naveensihag707@gmail.com' ? 'admin' : 'user',
           lastLogin: new Date().toISOString(),
           location: {
@@ -107,9 +98,15 @@ export default function Auth({ setCurrentUser }: { setCurrentUser: (user: User) 
         setCurrentUser(newUser);
         navigate('/dashboard');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('An error occurred. Please try again.');
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Invalid email or password.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('Email already in use.');
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

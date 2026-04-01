@@ -29,21 +29,29 @@ export default function Dashboard({ currentUser }: { currentUser: User | null })
 
       try {
         // Fetch sessions where currentUser is a participant
-        const sessionsQuery = query(
-          collection(db, 'sessions'),
-          where('users', 'array-contains', currentUser.id)
-        );
-        const sessionsSnapshot = await getDocs(sessionsQuery);
-        const sessionsList = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
-        setSessions(sessionsList);
+        try {
+          const sessionsQuery = query(
+            collection(db, 'sessions'),
+            where('users', 'array-contains', currentUser.id)
+          );
+          const sessionsSnapshot = await getDocs(sessionsQuery);
+          const sessionsList = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
+          setSessions(sessionsList);
+        } catch (error) {
+          console.error('Error fetching sessions in Dashboard.tsx:', error);
+        }
 
         // Fetch all users for matching and partner details
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const usersList = usersSnapshot.docs.map(doc => doc.data() as User);
-        setAllUsers(usersList);
-        
-        // Simple matching logic for dashboard
-        setMatches(usersList.filter(u => u.id !== currentUser.id).slice(0, 3));
+        try {
+          const usersSnapshot = await getDocs(collection(db, 'users'));
+          const usersList = usersSnapshot.docs.map(doc => doc.data() as User);
+          setAllUsers(usersList);
+          
+          // Simple matching logic for dashboard
+          setMatches(usersList.filter(u => u.id !== currentUser.id).slice(0, 3));
+        } catch (error) {
+          console.error('Error fetching users in Dashboard.tsx:', error);
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }

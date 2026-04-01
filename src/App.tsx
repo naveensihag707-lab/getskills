@@ -25,8 +25,9 @@ import Chat from './pages/Chat';
 import Scheduler from './pages/Scheduler';
 import Tracker from './pages/Tracker';
 import AdminDashboard from './pages/AdminDashboard';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { db, auth } from './firebase';
 
 import { cn } from './lib/utils';
 
@@ -35,27 +36,45 @@ export default function App() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'users'));
-        const usersList = querySnapshot.docs.map(doc => doc.data() as User);
-        setAllUsers(usersList);
-      } catch (error) {
-        console.error('Error fetching users:', error);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as User;
+            setCurrentUser(userData);
+            localStorage.setItem('skillswap_user', JSON.stringify(userData));
+            
+            // Fetch all users once authenticated
+            try {
+              const querySnapshot = await getDocs(collection(db, 'users'));
+              const usersList = querySnapshot.docs.map(doc => doc.data() as User);
+              setAllUsers(usersList);
+            } catch (error) {
+              console.error('Error fetching all users in App.tsx:', error);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      } else {
+        // User is signed out
+        setCurrentUser(null);
+        setAllUsers([]);
+        localStorage.removeItem('skillswap_user');
       }
-    };
+    });
 
-    fetchUsers();
-    
-    const savedUser = localStorage.getItem('skillswap_user');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
+    return () => unsubscribe();
   }, []);
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('skillswap_user');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (
