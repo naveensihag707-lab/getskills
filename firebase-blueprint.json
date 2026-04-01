@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and authentication data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "lastLogin": { "type": "string", "format": "date-time" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "country": { "type": "string" }
+          }
+        },
+        "skillsOffered": { "type": "array", "items": { "type": "string" } },
+        "skillsWanted": { "type": "array", "items": { "type": "string" } },
+        "level": { "type": "string" },
+        "bio": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "integer" },
+        "avatar": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "blockedUsers": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "name", "email", "password", "role"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "A skill swap session between two users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "users": { "type": "array", "items": { "type": "string" } },
+        "skillTaught": { "type": "string" },
+        "skillLearned": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "rating": { "type": "number" },
+        "feedback": { "type": "string" },
+        "meetingLink": { "type": "string" }
+      }
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message between two users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "isMeetingLink": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Skill swap sessions"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages"
+    }
+  }
+}

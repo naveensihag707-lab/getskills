@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - id: string
+    //   - name: string
+    //   - email: string (required, email format)
+    //   - password: string (required, hashed)
+    //   - role: string (required, enum: ['admin', 'user'])
+    //   - lastLogin: string (ISO timestamp)
+    //   - location: map (city, state, country)
+    //   - skillsOffered: list (strings)
+    //   - skillsWanted: list (strings)
+    //   - level: string
+    //   - bio: string
+    //   - rating: number
+    //   - reviewCount: number
+    //   - avatar: string
+    //   - isVerified: boolean
+    //   - blockedUsers: list (strings)
+    //
+    // Collection: sessions
+    // Document ID: sessionId
+    // Fields:
+    //   - users: list (strings)
+    //   - skillTaught: string
+    //   - skillLearned: string
+    //   - date: string
+    //   - time: string
+    //   - status: string (enum: ['pending', 'completed'])
+    //
+    // Collection: messages
+    // Document ID: messageId
+    // Fields:
+    //   - senderId: string
+    //   - receiverId: string
+    //   - text: string
+    //   - timestamp: string (ISO timestamp)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (request.auth.token.email == "naveensihag707@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'password', 'role']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'user'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Allow read if owner or admin. 
+      // Note: If public profiles are needed, we'd need to split the collection or denormalize.
+      // For now, we'll allow authenticated users to read basic info of others for matching.
+      allow read: if isAuthenticated();
+      
+      // Allow create if the user is creating their own profile and setting role to 'user'
+      // Or if admin is creating
+      allow create: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user') || isAdmin();
+      
+      // Allow update if owner (cannot change role) or admin
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.users || isAdmin());
+      allow create: if isAuthenticated() && (request.auth.uid in request.resource.data.users || isAdmin());
+      allow update: if isAuthenticated() && (request.auth.uid in resource.data.users || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId || isAdmin());
+      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.senderId || isAdmin());
+    }
+  }
+}
